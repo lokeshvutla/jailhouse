@@ -129,6 +129,7 @@ void gic_handle_sgir_write(struct sgi *sgi, bool affinity_routing)
 {
 	struct per_cpu *cpu_data = this_cpu_data();
 	unsigned long targets = sgi->targets;
+	u64 mpidr, cluster, core;
 	unsigned int cpu;
 
 	sgi->targets = 0;
@@ -138,13 +139,17 @@ void gic_handle_sgir_write(struct sgi *sgi, bool affinity_routing)
 		irqchip_set_pending(cpu_data, sgi->id);
 	else
 		for_each_cpu(cpu, cpu_data->cell->cpu_set) {
+			mpidr = per_cpu(cpu)->mpidr;
+			cluster = mpidr & MPIDR_CLUSTERID_MASK;
+			core = mpidr & MPIDR_AFF0_MASK;
+
 			if (sgi->routing_mode == 1) {
 				/* Route to all (cell) CPUs but the caller. */
 				if (cpu == cpu_data->cpu_id)
 					continue;
 			} else if (affinity_routing) {
-				if (!test_bit(cpu_data->mpidr & MPIDR_AFF0_MASK,
-					      &targets))
+				if (sgi->cluster_id != cluster ||
+				    !test_bit(core, &targets))
 					continue;
 			} else {
 				/*
@@ -164,7 +169,7 @@ void gic_handle_sgir_write(struct sgi *sgi, bool affinity_routing)
 			 * as well. So this adjustment is only targeting the
 			 * mode 0 case.
 			 */
-			sgi->targets |= (1 << cpu);
+			sgi->targets |= (1 << core);
 		}
 
 	/* Let the other CPUS inject their SGIs */
