@@ -38,10 +38,11 @@ void arm_cpu_park(void)
 void arm_cpu_kick(unsigned int cpu_id)
 {
 	u64 mpidr = per_cpu(cpu_id)->mpidr;
-	struct sgi sgi = {};
+	struct sgi sgi;
 
 	sgi.targets = 1 << MPIDR_AFFINITY_LEVEL(mpidr, 0);
 	sgi.cluster_id = mpidr & MPIDR_CLUSTERID_MASK;
+	sgi.routing_mode = 0;
 	sgi.id = SGI_EVENT;
 	irqchip_send_sgi(&sgi);
 }
