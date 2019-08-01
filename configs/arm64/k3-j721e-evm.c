@@ -19,9 +19,10 @@
 struct {
 	struct jailhouse_system header;
 	__u64 cpus[1];
-	struct jailhouse_memory mem_regions[28];
+	struct jailhouse_memory mem_regions[30];
 	struct jailhouse_irqchip irqchips[6];
 	struct jailhouse_pci_device pci_devices[1];
+	__u32 stream_ids[17];
 } __attribute__((packed)) config = {
 	.header = {
 		.signature = JAILHOUSE_SYSTEM_SIGNATURE,
@@ -50,6 +51,13 @@ struct {
 				.gicr_base = 0x01900000,
 				.maintenance_irq = 25,
 			},
+			.arm.iommu_units= {
+				{
+					.type = JAILHOUSE_IOMMU_SMMUV3,
+					.base = 0x36600000,
+					.size = 0x100000,
+				},
+			},
 		},
 		.root_cell = {
 			.name = "k3-j721e-evm",
@@ -58,13 +66,18 @@ struct {
 			.num_memory_regions = ARRAY_SIZE(config.mem_regions),
 			.num_irqchips = ARRAY_SIZE(config.irqchips),
 			.num_pci_devices = ARRAY_SIZE(config.pci_devices),
+			.num_stream_ids = ARRAY_SIZE(config.stream_ids),
 			.vpci_irq_base = 191 - 32,
+
 		},
 	},
 
 	.cpus = {
 		0x3,
 	},
+
+	.stream_ids = { 2, 256, 257, 258, 259, 260, 261, 262,
+			263, 264, 265, 266, 267, 268, 269, 270, 0xf002, },
 
 	.mem_regions = {
 		/* IVSHMEM shared memory region for 00:00.0 */ {
@@ -111,7 +124,14 @@ struct {
 		/* MAIN NAVSS */ {
 			.phys_start = 0x30800000,
 			.virt_start = 0x30800000,
-			.size = 0x0bc00000,
+			.size = 0x05e00000,
+			.flags = JAILHOUSE_MEM_READ | JAILHOUSE_MEM_WRITE |
+				JAILHOUSE_MEM_IO,
+		},
+		/* MAIN NAVSS 2 */ {
+			.phys_start = 0x36700000,
+			.virt_start = 0x36700000,
+			.size = 0x05d00000,
 			.flags = JAILHOUSE_MEM_READ | JAILHOUSE_MEM_WRITE |
 				JAILHOUSE_MEM_IO,
 		},
@@ -262,10 +282,17 @@ struct {
 		/* RAM - second bank */ {
 			.phys_start = 0x880000000,
 			.virt_start = 0x880000000,
-			.size = 0x80000000,
+			.size = 0x20000000,
 			.flags = JAILHOUSE_MEM_READ | JAILHOUSE_MEM_WRITE |
 				JAILHOUSE_MEM_EXECUTE | JAILHOUSE_MEM_DMA |
 				JAILHOUSE_MEM_LOADABLE,
+		},
+		/* RAM - reserved for inmate */ {
+			.phys_start = 0x8a0000000,
+			.virt_start = 0x8a0000000,
+			.size = 0x60000000,
+			.flags = JAILHOUSE_MEM_READ | JAILHOUSE_MEM_WRITE |
+				JAILHOUSE_MEM_EXECUTE | JAILHOUSE_MEM_LOADABLE,
 		},
 	},
 	.irqchips = {
